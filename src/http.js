@@ -1,4 +1,7 @@
+const { AsyncLocalStorage } = require('node:async_hooks');
+
 const DEFAULT_TIMEOUT = 20000;
+const requestContext = new AsyncLocalStorage();
 
 function normalizeSiteUrl(value) {
   let input = String(value || '').trim();
@@ -15,6 +18,40 @@ function normalizeSiteUrl(value) {
   return url.toString().replace(/\/$/, '');
 }
 
+function sanitizeContext(context = {}) {
+  const username = String(context.username || '').trim();
+  const password = String(context.password || '');
+  return {
+    username,
+    password,
+    authEnabled: Boolean(context.authEnabled && username),
+    skipDuplicateChecks: Boolean(context.skipDuplicateChecks)
+  };
+}
+
+function withRequestContext(context, worker) {
+  return requestContext.run(sanitizeContext(context), worker);
+}
+
+function getRequestContext() {
+  return requestContext.getStore() || sanitizeContext();
+}
+
+function getBasicAuthorizationHeader() {
+  const context = getRequestContext();
+  if (!context.authEnabled || !context.username) return '';
+  return `Basic ${Buffer.from(`${context.username}:${context.password}`).toString('base64')}`;
+}
+
+function getPlaywrightHttpCredentials() {
+  const context = getRequestContext();
+  if (!context.authEnabled || !context.username) return undefined;
+  return {
+    username: context.username,
+    password: context.password
+  };
+}
+
 async function fetchWithTimeout(url, options = {}) {
   const controller = new AbortController();
   const timeout = setTimeout(
@@ -22,13 +59,16 @@ async function fetchWithTimeout(url, options = {}) {
     options.timeout || DEFAULT_TIMEOUT
   );
 
+  const authorization = getBasicAuthorizationHeader();
+
   try {
     const response = await fetch(url, {
       ...options,
       signal: controller.signal,
       headers: {
-        'User-Agent': 'WordPress-Content-Auditor/1.0',
+        'User-Agent': 'Radish-WordPress-Auditor/4.3',
         Accept: 'application/json,text/html;q=0.9,*/*;q=0.8',
+        ...(authorization ? { Authorization: authorization } : {}),
         ...(options.headers || {})
       }
     });
@@ -43,8 +83,8 @@ async function fetchWithTimeout(url, options = {}) {
   }
 }
 
-async function fetchJson(url) {
-  const response = await fetchWithTimeout(url);
+async function fetchJson(url, options = {}) {
+  const response = await fetchWithTimeout(url, options);
   const contentType = response.headers.get('content-type') || '';
 
   if (!response.ok) {
@@ -67,5 +107,9 @@ async function fetchJson(url) {
 module.exports = {
   normalizeSiteUrl,
   fetchWithTimeout,
-  fetchJson
+  fetchJson,
+  withRequestContext,
+  getRequestContext,
+  getBasicAuthorizationHeader,
+  getPlaywrightHttpCredentials
 };

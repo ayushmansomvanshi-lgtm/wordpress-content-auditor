@@ -1,56 +1,37 @@
-# WordPress Content Auditor
+# Radish 4.3
 
-A small Node.js tool that:
+Radish is a read-only WordPress content, structure, performance and interface auditor.
 
-- detects the public WordPress REST API;
-- fetches every published post using pagination;
-- fetches all categories, including empty categories;
-- compares WordPress category counts with locally calculated counts;
-- detects posts with no category;
-- detects posts assigned only to `Uncategorized`;
-- detects duplicate normalized post URLs;
-- exports posts, categories, and issues to CSV.
+## New in 4.3
 
-## Requirements
+- HTTP Basic Authentication fields for password-protected staging sites.
+- Optional duplicate-post skipping while staging access is enabled.
+- Image link checks now apply only to representative main pages: homepage, category, About, Contact, Privacy, legal and unique page templates.
+- Single-post content images are no longer reported for missing links.
+- Every post still shows its featured-image URL when WordPress exposes one.
+- Writing bracket checks run only on H2 subheadings.
+- Ordered-list prefixes such as `1)`, `2)` and `a)` are ignored by bracket checks.
+- Pagination for long Writing and Issues results.
+- Radish favicon and updated copyright footer.
 
-- Node.js 18 or newer
-- A WordPress website with a publicly accessible REST API
-
-## Installation
+## Run locally
 
 ```bash
-cd wordpress-content-auditor
 npm install
 npm start
 ```
 
-Open:
+Open `http://localhost:3000/?version=4.4.0`.
 
-```text
-http://localhost:3000
-```
+## Staging access
 
-## Development mode
+Open **Staging website access** in the audit form. Enable it and enter the username and password used by the browser's HTTP Basic Authentication prompt. Credentials are kept only in memory for the current request and are not included in the audit result.
 
-```bash
-npm run dev
-```
+The staging option is for server-level HTTP Basic Authentication. It is not a WordPress administrator login form.
 
-## How it works
 
-1. The app checks `/wp-json/` and the fallback `?rest_route=/` endpoint.
-2. It loads all categories with `per_page=100` and follows every API page.
-3. It discovers REST-visible post types.
-4. It audits post types that use the standard `category` taxonomy.
-5. It fetches every public post.
-6. It calculates category membership from the fetched posts.
-7. It compares the calculated totals with each category's WordPress `count` value.
-8. It shows issues and permits CSV export.
-
-## Important limitations
-
-The public audit cannot see drafts, private posts, pending posts, scheduled posts, or custom post types that are not exposed through REST.
-
-Some WordPress security plugins disable or modify REST endpoints. Those websites require a fallback crawler or authenticated mode.
-
-A post can belong to multiple categories, so the sum of category counts can be greater than the number of unique posts.
+## v4.4 changes
+- Removed the three-card H1 source/DOM/visibility inspector from the heading UI while retaining the clear H1 verdict and outline.
+- Changed the 75-character writing rule from post title to post slug.
+- Added representative-page post-card checks for linked titles, images and read-more buttons.
+- Updated footer copyright text.

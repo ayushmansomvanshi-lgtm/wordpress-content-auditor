@@ -1,0 +1,7 @@
+services:
+  - type: web
+    name: radish-wordpress-auditor
+    runtime: docker
+    plan: free
+    healthCheckPath: /health
+    autoDeploy: true

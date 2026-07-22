@@ -1,109 +1,410 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>WordPress Content Auditor</title>
-  <link rel="stylesheet" href="/style.css" />
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Radish audits WordPress posts, images, writing, performance, caching, headings and user interface patterns.">
+  <title>Radish — WordPress Site Auditor</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <meta name="theme-color" content="#111827">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/style.css">
 </head>
 <body>
-  <main class="container">
-    <header class="hero">
-      <div>
-        <p class="eyebrow">Content coverage checker</p>
-        <h1>WordPress Content Auditor</h1>
-        <p class="subtitle">
-          Count published posts, compare category totals, and find content coverage issues.
-        </p>
-      </div>
-    </header>
+  <div class="noise" aria-hidden="true"></div>
 
-    <section class="panel form-panel">
-      <form id="auditForm">
-        <label for="siteUrl">WordPress website URL</label>
-        <div class="input-row">
-          <input
-            id="siteUrl"
-            name="siteUrl"
-            type="text"
-            placeholder="https://example.com"
-            autocomplete="url"
-            required
-          />
-          <button id="auditButton" type="submit">Start audit</button>
+  <header class="topbar">
+    <a class="brand" href="#top" aria-label="Radish home">
+      <span class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 40 40"><path d="M21.2 7.8c5.2.2 9.2 3.9 9.2 9.1 0 7.8-7.4 14.4-10.4 16.6-3-2.2-10.4-8.8-10.4-16.6 0-5.1 3.9-8.9 9.1-9.1"/><path d="M19 7.8c-1.6-2.5-1.4-4.7.4-6.6M23 8.4c2.3-2 4.8-2.2 7.2-.8M16 8.6c-2.5-1.7-5-1.5-7.2.5"/></svg>
+      </span>
+      <span><strong>Radish</strong><small>WordPress intelligence</small></span>
+    </a>
+    <div class="topbar-meta">
+      <span class="live-dot"></span>
+      <span>Content, structure and design audit</span>
+      <span class="version-badge">v4.4.0</span>
+    </div>
+  </header>
+
+  <main id="top" class="shell">
+    <section class="hero-card reveal">
+      <div class="hero-copy">
+        <span class="eyebrow">A clearer view of every WordPress site</span>
+        <h1>Audit WordPress content, performance, assets and interactive UI in one place.</h1>
+        <p>Radish combines WordPress REST data, Chromium interaction checks and a mobile Lighthouse run. Review every post, page structure, web vital, image, cache policy and common interface pattern from one report.</p>
+        <div class="hero-pills" aria-label="Audit capabilities">
+          <span>Exact duplicates</span>
+          <span>Post health</span>
+          <span>Text fonts</span>
+          <span>Heading structure</span>
+          <span>Performance & UX</span>
         </div>
-        <p class="help">
-          The website must expose its public WordPress REST API.
-        </p>
+      </div>
+
+      <form id="auditForm" class="audit-form">
+        <div class="form-heading">
+          <span>Start a new audit</span>
+          <small>Public or password-protected staging sites</small>
+        </div>
+        <label for="siteUrl">WordPress website</label>
+        <div class="url-control">
+          <span class="url-icon" aria-hidden="true">https://</span>
+          <input id="siteUrl" name="siteUrl" type="text" inputmode="url" autocomplete="url" placeholder="example.com" required>
+          <button id="auditButton" type="submit">
+            <span>Run Radish</span>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+          </button>
+        </div>
+        <p class="form-note">Radish reads WordPress REST content and opens up to ten representative pages in Chromium. Large sites may take a few minutes.</p>
+
+        <details class="staging-access" id="stagingAccess">
+          <summary>
+            <span class="staging-summary-icon" aria-hidden="true">🔒</span>
+            <span><strong>Staging website access</strong><small>Add HTTP Basic Authentication only when the website shows a username and password prompt.</small></span>
+            <span class="staging-summary-action">Configure</span>
+          </summary>
+          <div class="staging-fields">
+            <label class="switch-row" for="stagingEnabled">
+              <span><strong>Use staging credentials</strong><small>Credentials are used only for this audit and are not saved.</small></span>
+              <input id="stagingEnabled" type="checkbox" role="switch">
+              <i aria-hidden="true"></i>
+            </label>
+            <div class="credential-grid" id="credentialGrid" aria-disabled="true">
+              <label><span>Username</span><input id="stagingUsername" type="text" autocomplete="username" placeholder="Staging username" disabled></label>
+              <label><span>Password</span><input id="stagingPassword" type="password" autocomplete="current-password" placeholder="Staging password" disabled></label>
+            </div>
+            <label class="check-row" for="skipDuplicateChecks">
+              <input id="skipDuplicateChecks" type="checkbox" checked>
+              <span><strong>Skip duplicate-post checks for this staging audit</strong><small>This avoids loop/template duplicates from being reported while staging credentials are active.</small></span>
+            </label>
+          </div>
+        </details>
       </form>
     </section>
 
-    <section id="status" class="status hidden" aria-live="polite"></section>
+    <section id="auditStatus" class="status hidden" aria-live="polite">
+      <span class="status-indicator"></span>
+      <div>
+        <strong id="statusTitle">Preparing audit</strong>
+        <p id="statusText"></p>
+      </div>
+      <div class="status-progress" aria-hidden="true"><span id="statusProgressBar"></span></div>
+    </section>
 
-    <section id="results" class="hidden">
-      <div id="summaryCards" class="cards"></div>
+    <section id="results" class="results hidden">
+      <div class="results-heading reveal">
+        <div>
+          <span class="eyebrow">Audit complete</span>
+          <h2 id="siteHeading">Website report</h2>
+          <p id="auditMeta" class="muted"></p>
+        </div>
+        <div class="export-menu">
+          <button class="ghost export" data-export="posts">Posts CSV</button>
+          <button class="ghost export" data-export="images">Images CSV</button>
+          <button class="ghost export" data-export="duplicates">Duplicates CSV</button>
+          <button class="ghost export" data-export="fonts">Fonts CSV</button>
+          <button class="ghost export" data-export="headings">Headings CSV</button>
+          <button class="ghost export" data-export="performance">Performance CSV</button>
+          <button class="ghost export" data-export="wordpress">WordPress CSV</button>
+          <button class="ghost export" data-export="writing">Writing CSV</button>
+          <button class="ghost export" data-export="issues">Issues CSV</button>
+        </div>
+      </div>
 
-      <section class="panel">
-        <div class="section-heading">
-          <div>
-            <p class="eyebrow">Coverage</p>
-            <h2>Categories</h2>
+      <div class="workspace">
+        <aside class="result-rail" aria-label="Report sections">
+          <div class="rail-card">
+            <div class="rail-score" id="railScore"><strong>—</strong><span>health</span></div>
+            <nav class="rail-nav" id="resultTabs">
+              <button class="rail-tab active" data-tab="overview"><span>01</span>Overview</button>
+              <button class="rail-tab" data-tab="posts"><span>02</span>Posts</button>
+              <button class="rail-tab" data-tab="images"><span>03</span>Images <b id="imageTabCount">0</b></button>
+              <button class="rail-tab" data-tab="duplicates"><span>04</span>Duplicates <b id="duplicateTabCount">0</b></button>
+              <button class="rail-tab" data-tab="typography"><span>05</span>Typography</button>
+              <button class="rail-tab" data-tab="headings"><span>06</span>Headings</button>
+              <button class="rail-tab" data-tab="performance"><span>07</span>Performance <b id="performanceTabCount">0</b></button>
+              <button class="rail-tab" data-tab="wordpress"><span>08</span>WordPress</button>
+              <button class="rail-tab" data-tab="interactions"><span>09</span>UI checks <b id="interactionTabCount">0</b></button>
+              <button class="rail-tab" data-tab="writing"><span>10</span>Writing <b id="writingTabCount">0</b></button>
+              <button class="rail-tab" data-tab="issues"><span>11</span>Issues <b id="issueTabCount">0</b></button>
+            </nav>
+            <div class="rail-note">
+              <span class="rail-note-icon">i</span>
+              <p>Each check has its own tab. Radish is read-only and does not change the audited website.</p>
+            </div>
           </div>
-          <button class="secondary export" data-type="categories">Export CSV</button>
-        </div>
-        <div class="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Category</th>
-                <th>WordPress</th>
-                <th>Fetched</th>
-                <th>Difference</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody id="categoryRows"></tbody>
-          </table>
-        </div>
-      </section>
+        </aside>
 
-      <section class="panel">
-        <div class="section-heading">
-          <div>
-            <p class="eyebrow">Review</p>
-            <h2>Issues</h2>
-          </div>
-          <button class="secondary export" data-type="issues">Export CSV</button>
-        </div>
-        <div id="issueList" class="issue-list"></div>
-      </section>
+        <div class="result-content">
+          <section class="tab-panel active" data-panel="overview">
+            <div id="summaryCards" class="summary-grid"></div>
 
-      <section class="panel">
-        <div class="section-heading">
-          <div>
-            <p class="eyebrow">Inventory</p>
-            <h2>Posts</h2>
-          </div>
-          <button class="secondary export" data-type="posts">Export CSV</button>
+            <div class="overview-grid">
+              <article class="panel insight-card">
+                <div class="panel-kicker">Content integrity</div>
+                <h3>Exact duplication snapshot</h3>
+                <div id="duplicateSnapshot" class="metric-stack"></div>
+                <button class="text-button" data-open-tab="duplicates">See every repeated location <span>→</span></button>
+              </article>
+
+              <article class="panel insight-card">
+                <div class="panel-kicker">Visual structure</div>
+                <h3>Representative page scan</h3>
+                <div id="pageScanSnapshot" class="metric-stack"></div>
+                <button class="text-button" data-open-tab="headings">Review heading trees <span>→</span></button>
+              </article>
+            </div>
+
+            <article class="panel">
+              <div class="panel-heading">
+                <div>
+                  <span class="panel-kicker">Priority view</span>
+                  <h3>What needs attention first</h3>
+                </div>
+                <button class="ghost" data-open-tab="issues">Open all issues</button>
+              </div>
+              <div id="priorityIssues" class="priority-grid"></div>
+            </article>
+          </section>
+
+          <section class="tab-panel" data-panel="posts">
+            <article class="panel no-margin">
+              <div class="panel-heading">
+                <div>
+                  <span class="panel-kicker">Every published item</span>
+                  <h3>Post health inventory</h3>
+                  <p class="muted">Dates, featured images, author pages, biographies and duplicate occurrence counts.</p>
+                </div>
+                <div id="postHealthScore" class="health-score"></div>
+              </div>
+
+              <div class="toolbar">
+                <label class="search-control">
+                  <span aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.2-3.2"/></svg></span>
+                  <input id="postSearch" type="search" placeholder="Search title, ID, author or post type">
+                </label>
+                <select id="postFilter" aria-label="Filter posts">
+                  <option value="all">All posts</option>
+                  <option value="healthy">Healthy only</option>
+                  <option value="review">Needs review</option>
+                  <option value="featured">Missing featured image</option>
+                  <option value="author-page">Author page problem</option>
+                  <option value="author-bio">Missing author bio</option>
+                  <option value="duplicate-title">Repeated title</option>
+                  <option value="duplicate-content">Repeated full post</option>
+                  <option value="date">Missing post date</option>
+                  <option value="writing">Writing check</option>
+                </select>
+              </div>
+
+              <div class="table-wrap">
+                <table>
+                  <thead><tr>
+                    <th>Post</th><th>Published</th><th>Updated</th><th>Featured image</th><th>Post images</th><th>Author</th><th>Author page</th><th>Bio</th><th>Duplicates</th><th>Health</th>
+                  </tr></thead>
+                  <tbody id="postRows"></tbody>
+                </table>
+              </div>
+              <div class="pagination-bar">
+                <span id="postCount" class="muted"></span>
+                <div class="pagination-controls">
+                  <button id="previousPage" class="ghost">Previous</button>
+                  <span id="pageLabel"></span>
+                  <button id="nextPage" class="ghost">Next</button>
+                </div>
+              </div>
+            </article>
+          </section>
+
+          <section class="tab-panel" data-panel="images">
+            <div class="section-intro">
+              <div>
+                <span class="panel-kicker">Image inventory</span>
+                <h3>Featured images, main-page links and loading problems</h3>
+                <p class="muted">Every post is checked for a featured-image URL. Link checks are limited to main pages such as the homepage, category pages, About, Contact and other unique pages. Single-post content images are not flagged for missing links.</p>
+              </div>
+              <div class="segmented" id="imageViewTabs">
+                <button class="active" data-image-view="posts">Featured images</button>
+                <button data-image-view="loading">Main pages & loading</button>
+                <button data-image-view="post-links">Post card links</button>
+              </div>
+            </div>
+            <div id="imageAuditSummary" class="image-audit-summary"></div>
+            <div class="image-view active" data-image-panel="posts">
+              <article class="panel no-margin">
+                <div class="toolbar">
+                  <label class="search-control"><span aria-hidden="true">⌕</span><input id="imageSearch" type="search" placeholder="Search post or image URL"></label>
+                  <select id="imageFilter" aria-label="Filter posts"><option value="all">All posts</option><option value="featured-missing">Missing featured image</option><option value="featured-link-missing">Featured image link missing</option><option value="date-missing">Post date missing</option></select>
+                </div>
+                <div class="table-wrap"><table class="post-image-table"><thead><tr><th>Post</th><th>Post date</th><th>Featured image</th><th>Images in content</th></tr></thead><tbody id="postImageRows"></tbody></table></div>
+              </article>
+            </div>
+            <div class="image-view" data-image-panel="loading">
+              <article class="panel no-margin">
+                <div class="table-wrap image-table-wrap"><table class="image-audit-table"><thead><tr><th>Image</th><th>Page</th><th>Link</th><th>Rendered</th><th>Original</th><th>File size</th><th>Loading</th><th>Problem</th></tr></thead><tbody id="imageAuditRows"></tbody></table></div>
+              </article>
+            </div>
+            <div class="image-view" data-image-panel="post-links">
+              <article class="panel no-margin">
+                <div class="section-intro compact-section-intro">
+                  <div><span class="panel-kicker">Representative pages</span><h3>Post title, image and button links</h3><p class="muted">Checks post cards on the homepage, category and regular pages. Single-post pages are excluded.</p></div>
+                </div>
+                <div class="table-wrap"><table class="post-link-table"><thead><tr><th>Post card</th><th>Representative page</th><th>Title</th><th>Image</th><th>Button</th></tr></thead><tbody id="postCardLinkRows"></tbody></table></div>
+              </article>
+            </div>
+          </section>
+
+          <section class="tab-panel" data-panel="duplicates">
+            <div class="section-intro">
+              <div>
+                <span class="panel-kicker">Exact match intelligence</span>
+                <h3>Repeated posts and their precise locations</h3>
+                <p class="muted">Each group shows total occurrences, additional repeats and every WordPress URL where the match appears.</p>
+              </div>
+              <div class="segmented" id="duplicateTypeFilter">
+                <button class="active" data-duplicate-type="all">All</button>
+                <button data-duplicate-type="title">Titles</button>
+                <button data-duplicate-type="content">Full posts</button>
+              </div>
+            </div>
+            <div id="duplicateSummary" class="mini-summary-grid"></div>
+            <div id="duplicateGroups" class="duplicate-groups"></div>
+          </section>
+
+          <section class="tab-panel" data-panel="typography">
+            <div class="section-intro">
+              <div>
+                <span class="panel-kicker">Computed browser styles</span>
+                <h3>Text fonts used across representative pages</h3>
+                <p class="muted">Radish inspects visible text elements only and reports the computed font stacks, sizes and weights actually used.</p>
+              </div>
+              <label class="search-control compact-search">
+                <span aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.2-3.2"/></svg></span>
+                <input id="fontSearch" type="search" placeholder="Filter font families">
+              </label>
+            </div>
+            <div id="fontSummary" class="mini-summary-grid"></div>
+            <div id="fontGrid" class="font-grid"></div>
+          </section>
+
+          <section class="tab-panel" data-panel="headings">
+            <div class="section-intro heading-intro">
+              <div>
+                <span class="panel-kicker">Source-code + rendered DOM inspection</span>
+                <h3>Heading hierarchy by page type</h3>
+                <p class="muted">Radish checks whether an actual &lt;h1&gt; tag exists in downloaded HTML, whether it remains in the rendered DOM, and separately whether it is visible. A hidden H1 is reported as present in code, not missing.</p>
+              </div>
+              <select id="headingPageFilter" aria-label="Choose representative page"></select>
+            </div>
+
+            <div class="heading-toolbar panel no-margin">
+              <label class="search-control heading-search-control">
+                <span aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.2-3.2"/></svg></span>
+                <input id="headingSearch" type="search" placeholder="Search heading text or CSS class">
+              </label>
+              <div id="headingLevelFilter" class="segmented heading-level-filter" aria-label="Filter heading levels">
+                <button class="active" data-heading-level="all">All</button>
+                <button data-heading-level="1">H1</button>
+                <button data-heading-level="2">H2</button>
+                <button data-heading-level="3">H3</button>
+                <button data-heading-level="4">H4</button>
+                <button data-heading-level="5">H5</button>
+                <button data-heading-level="6">H6</button>
+              </div>
+            </div>
+
+            <div class="heading-workbench">
+              <aside id="headingPageTabs" class="heading-page-list" aria-label="Inspected page types"></aside>
+              <div id="headingDetails" class="heading-detail-stage"></div>
+            </div>
+          </section>
+
+          <section class="tab-panel" data-panel="performance">
+            <div class="section-intro performance-intro">
+              <div>
+                <span class="panel-kicker">Mobile Lighthouse lab data</span>
+                <h3>Performance, CSS, JavaScript and delivery</h3>
+                <p class="muted">Homepage Lighthouse metrics are combined with cache and compression checks. Images and UI patterns have their own tabs.</p>
+              </div>
+              <div id="performanceRunMeta" class="performance-run-meta"></div>
+            </div>
+
+            <div class="performance-view-tabs" id="performanceViewTabs" role="tablist" aria-label="Performance report sections">
+              <button class="active" data-performance-view="vitals" role="tab">Core metrics</button>
+              <button data-performance-view="resources" role="tab">CSS & JavaScript</button>
+              <button data-performance-view="delivery" role="tab">Cache & compression</button>
+            </div>
+
+            <div class="performance-view active" data-performance-panel="vitals">
+              <div class="performance-score-layout">
+                <article class="panel performance-score-card" id="performanceScoreCard"></article>
+                <div id="performanceMetrics" class="vitals-grid"></div>
+              </div>
+              <div id="performanceDiagnostics" class="diagnostic-strip"></div>
+              <article class="panel performance-method-note">
+                <div class="method-icon">i</div>
+                <div><strong>How this is measured</strong><p>Radish runs a mobile Lighthouse lab audit against the homepage. Values can vary between runs because network, server and third-party conditions change.</p></div>
+              </article>
+            </div>
+
+            <div class="performance-view" data-performance-panel="resources">
+              <div class="section-intro compact-performance-intro">
+                <div><span class="panel-kicker">Resource efficiency</span><h3>Unused CSS and JavaScript</h3><p class="muted">Potential transfer savings and the exact assets contributing to unused code.</p></div>
+              </div>
+              <div id="resourceAuditGrid" class="resource-audit-grid"></div>
+            </div>
+
+            <div class="performance-view" data-performance-panel="delivery">
+              <div class="section-intro compact-performance-intro">
+                <div><span class="panel-kicker">Network delivery</span><h3>Cache and compression observations</h3><p class="muted">Combines Lighthouse opportunities with headers observed while representative pages load.</p></div>
+              </div>
+              <div id="deliverySummary" class="delivery-summary"></div>
+              <div id="deliveryIssueList" class="delivery-issue-list"></div>
+            </div>
+
+          </section>
+
+          <section class="tab-panel" data-panel="wordpress">
+            <div class="section-intro"><div><span class="panel-kicker">WordPress setup</span><h3>Plugins, delivery and content housekeeping</h3><p class="muted">Public evidence is shown as detected or not detected. Database checks that need WordPress admin access are marked unavailable instead of guessed.</p></div></div>
+            <div id="wordpressCheckGrid" class="wordpress-check-grid"></div>
+            <article class="panel"><div class="panel-heading compact"><div><span class="panel-kicker">Public plugin evidence</span><h3>Plugin folders seen in loaded assets</h3></div></div><div id="pluginChipList" class="plugin-chip-list"></div></article>
+          </section>
+
+          <section class="tab-panel" data-panel="interactions">
+            <div class="section-intro"><div><span class="panel-kicker">UI checks</span><h3>Menus, sliders, popups, search and more</h3><p class="muted">Each pattern appears once. Open its details only when you need the page list.</p></div></div>
+            <div id="interactionAuditGrid" class="interaction-audit-grid simple-interactions"></div>
+          </section>
+
+          <section class="tab-panel" data-panel="writing">
+            <div class="section-intro"><div><span class="panel-kicker">Writing review</span><h3>Possible title and subheading mistakes</h3><p class="muted">These are quick local checks for repeated words, common spelling mistakes, capitalisation and punctuation. They are suggestions, not a full grammar service.</p></div>
+              <label class="search-control compact-search"><span aria-hidden="true">⌕</span><input id="writingSearch" type="search" placeholder="Search post or heading"></label></div>
+            <div id="writingSummary" class="mini-summary-grid"></div>
+            <div id="writingList" class="writing-list"></div>
+            <div class="pagination-bar content-pagination"><span id="writingCount" class="muted"></span><div class="pagination-controls"><button id="previousWritingPage" class="ghost">Previous</button><span id="writingPageLabel"></span><button id="nextWritingPage" class="ghost">Next</button></div></div>
+          </section>
+
+          <section class="tab-panel" data-panel="issues">
+            <article class="panel no-margin">
+              <div class="panel-heading compact">
+                <div>
+                  <span class="panel-kicker">Action list</span>
+                  <h3>Issue groups</h3>
+                </div>
+                <select id="issueFilter" aria-label="Filter issues"><option value="all">All issue groups</option></select>
+              </div>
+              <div id="issueList" class="issue-list"></div>
+              <div class="pagination-bar content-pagination"><span id="issueCount" class="muted"></span><div class="pagination-controls"><button id="previousIssuePage" class="ghost">Previous</button><span id="issuePageLabel"></span><button id="nextIssuePage" class="ghost">Next</button></div></div>
+            </article>
+          </section>
         </div>
-        <div class="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>ID</th>
-                <th>Title</th>
-                <th>Type</th>
-                <th>Categories</th>
-                <th>Modified</th>
-              </tr>
-            </thead>
-            <tbody id="postRows"></tbody>
-          </table>
-        </div>
-      </section>
+      </div>
     </section>
   </main>
 
-  <script src="/app.js"></script>
+  <footer class="footer"><span>Copyright 2026 Radish | All rights are reserved | Developed by Ayushman</span><span>Read-only website audit · no content is changed</span></footer>
+  <script src="/app.js" defer></script>
 </body>
 </html>
