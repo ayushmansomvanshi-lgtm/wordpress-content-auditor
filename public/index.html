@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>WordPress Content Auditor</title>
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <main class="container">
+    <header class="hero">
+      <div>
+        <p class="eyebrow">Content coverage checker</p>
+        <h1>WordPress Content Auditor</h1>
+        <p class="subtitle">
+          Count published posts, compare category totals, and find content coverage issues.
+        </p>
+      </div>
+    </header>
+
+    <section class="panel form-panel">
+      <form id="auditForm">
+        <label for="siteUrl">WordPress website URL</label>
+        <div class="input-row">
+          <input
+            id="siteUrl"
+            name="siteUrl"
+            type="text"
+            placeholder="https://example.com"
+            autocomplete="url"
+            required
+          />
+          <button id="auditButton" type="submit">Start audit</button>
+        </div>
+        <p class="help">
+          The website must expose its public WordPress REST API.
+        </p>
+      </form>
+    </section>
+
+    <section id="status" class="status hidden" aria-live="polite"></section>
+
+    <section id="results" class="hidden">
+      <div id="summaryCards" class="cards"></div>
+
+      <section class="panel">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Coverage</p>
+            <h2>Categories</h2>
+          </div>
+          <button class="secondary export" data-type="categories">Export CSV</button>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Category</th>
+                <th>WordPress</th>
+                <th>Fetched</th>
+                <th>Difference</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="categoryRows"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Review</p>
+            <h2>Issues</h2>
+          </div>
+          <button class="secondary export" data-type="issues">Export CSV</button>
+        </div>
+        <div id="issueList" class="issue-list"></div>
+      </section>
+
+      <section class="panel">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Inventory</p>
+            <h2>Posts</h2>
+          </div>
+          <button class="secondary export" data-type="posts">Export CSV</button>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Title</th>
+                <th>Type</th>
+                <th>Categories</th>
+                <th>Modified</th>
+              </tr>
+            </thead>
+            <tbody id="postRows"></tbody>
+          </table>
+        </div>
+      </section>
+    </section>
+  </main>
+
+  <script src="/app.js"></script>
+</body>
+</html>
