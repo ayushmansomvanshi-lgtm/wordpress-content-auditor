@@ -1,37 +1,102 @@
-# Radish 4.3
+# Radish v5.0.0
 
-Radish is a read-only WordPress content, structure, performance and interface auditor.
+Radish is a read-only WordPress content, structure, image, UI and performance auditor.
 
-## New in 4.3
+## New in v5
 
-- HTTP Basic Authentication fields for password-protected staging sites.
-- Optional duplicate-post skipping while staging access is enabled.
-- Image link checks now apply only to representative main pages: homepage, category, About, Contact, Privacy, legal and unique page templates.
-- Single-post content images are no longer reported for missing links.
-- Every post still shows its featured-image URL when WordPress exposes one.
-- Writing bracket checks run only on H2 subheadings.
-- Ordered-list prefixes such as `1)`, `2)` and `a)` are ignored by bracket checks.
-- Pagination for long Writing and Issues results.
-- Radish favicon and updated copyright footer.
+### Scan modes
 
-## Run locally
+- **Quick**: WordPress content plus 3 representative pages. Lighthouse and interaction-click checks are skipped.
+- **Standard**: Content, 6 representative pages, UI checks, images and 1 Lighthouse run.
+- **Deep**: Full content audit, up to 10 representative pages and 3 sequential Lighthouse runs.
+
+### Performance modes
+
+Choose before the audit:
+
+- Mobile
+- Desktop
+- Both
+
+When **Both** is selected, Radish runs each device profile separately and provides a side-by-side median comparison.
+
+### Transparent Lighthouse reporting
+
+The Performance tab now shows:
+
+- Lighthouse version
+- Mobile or desktop profile
+- Simulated throttling method
+- Viewport and scale factor
+- User agent
+- Completed and requested run count
+- Selected representative run
+- Run timestamps
+- Final URL after redirects
+- Cold-cache mode
+- Every run for LCP, FCP, CLS, TTFB, Speed Index and TBT
+- Median values
+- Mobile versus desktop comparison
+
+## Local installation
 
 ```bash
-npm install
+cd "$HOME/Downloads"
+unzip -o radish-v5-full.zip
+cd radish-v5
+chmod +x INSTALL_UPDATE.command
+./INSTALL_UPDATE.command
+```
+
+Then run:
+
+```bash
+cd "$HOME/Desktop/Total Post"
 npm start
 ```
 
-Open `http://localhost:3000/?version=4.4.1`.
+Open:
 
-## Staging access
+```text
+http://localhost:3000/?version=5.0.0
+```
 
-Open **Staging website access** in the audit form. Enable it and enter the username and password used by the browser's HTTP Basic Authentication prompt. Credentials are kept only in memory for the current request and are not included in the audit result.
+Health check:
 
-The staging option is for server-level HTTP Basic Authentication. It is not a WordPress administrator login form.
+```text
+http://localhost:3000/health
+```
 
+Expected version:
 
-## v4.4.1 changes
-- Removed the three-card H1 source/DOM/visibility inspector from the heading UI while retaining the clear H1 verdict and outline.
-- Changed the 75-character writing rule from post title to post slug.
-- Added representative-page post-card checks for linked titles, images and read-more buttons.
-- Updated footer copyright text.
+```json
+{
+  "ok": true,
+  "product": "Radish",
+  "version": "5.0.0"
+}
+```
+
+## Render deployment
+
+Commit and push the updated project:
+
+```bash
+cd "$HOME/Desktop/Total Post"
+git add .
+git commit -m "Upgrade Radish to v5"
+git push origin main
+```
+
+A Deep scan with **Both** selected performs six Lighthouse runs. This is intentionally detailed but can be heavy on a free hosting instance. Standard Mobile is the recommended default for hosted use.
+
+## Staging authentication
+
+Radish supports HTTP Basic Authentication for password-protected staging sites. Credentials are held only for the current audit and are cleared afterward.
+
+## Important behavior
+
+- Lighthouse runs are sequential to avoid one run distorting another.
+- Median metric values are calculated independently from all successful runs.
+- One middle-score run is retained as the representative report for resource opportunities and diagnostics.
+- Quick scan does not create a performance-unavailable issue because performance is intentionally skipped.
