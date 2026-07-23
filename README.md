@@ -100,3 +100,4 @@ Radish supports HTTP Basic Authentication for password-protected staging sites. 
 - Median metric values are calculated independently from all successful runs.
 - One middle-score run is retained as the representative report for resource opportunities and diagnostics.
 - Quick scan does not create a performance-unavailable issue because performance is intentionally skipped.
+# Radish
