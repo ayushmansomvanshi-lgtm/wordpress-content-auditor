@@ -21,7 +21,7 @@ npm install
 npm start
 ```
 
-Open `http://localhost:3000/?version=4.4.0`.
+Open `http://localhost:3000/?version=4.4.1`.
 
 ## Staging access
 
@@ -30,7 +30,7 @@ Open **Staging website access** in the audit form. Enable it and enter the usern
 The staging option is for server-level HTTP Basic Authentication. It is not a WordPress administrator login form.
 
 
-## v4.4 changes
+## v4.4.1 changes
 - Removed the three-card H1 source/DOM/visibility inspector from the heading UI while retaining the clear H1 verdict and outline.
 - Changed the 75-character writing rule from post title to post slug.
 - Added representative-page post-card checks for linked titles, images and read-more buttons.

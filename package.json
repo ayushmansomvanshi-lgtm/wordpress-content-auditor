@@ -1,6 +1,6 @@
 {
   "name": "radish-wordpress-auditor",
-  "version": "4.4.0",
+  "version": "4.4.1",
   "private": true,
   "description": "Radish audits WordPress content, featured images, main-page image links, authors, writing, headings, performance and UI patterns, including password-protected staging sites.",
   "main": "server.js",

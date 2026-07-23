@@ -176,7 +176,7 @@ async function fetchSourceHtml(url) {
         Accept: 'text/html,application/xhtml+xml',
         'Cache-Control': 'no-cache',
         'User-Agent':
-          'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/150 Safari/537.36 Radish/4.4'
+          'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/150 Safari/537.36 Radish/4.4.1'
       }
     });
     return {
@@ -1144,7 +1144,8 @@ function unavailablePage(descriptor, error) {
 }
 
 async function scanRepresentativePages(descriptors) {
-  const pagesToScan = descriptors.slice(0, 10);
+  const hostedLimit = Number(process.env.RADISH_MAX_REPRESENTATIVE_PAGES || (process.env.RENDER ? 6 : 10));
+  const pagesToScan = descriptors.slice(0, Math.max(1, hostedLimit));
 
   if (!pagesToScan.length) {
     return {
@@ -1185,7 +1186,14 @@ async function scanRepresentativePages(descriptors) {
   try {
     browser = await playwright.chromium.launch({
       headless: true,
-      args: ['--no-sandbox', '--disable-dev-shm-usage']
+      args: [
+        '--no-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-gpu',
+        '--disable-background-networking',
+        '--disable-renderer-backgrounding',
+        '--disable-background-timer-throttling'
+      ]
     });
 
     const httpCredentials = getPlaywrightHttpCredentials();
@@ -1194,7 +1202,7 @@ async function scanRepresentativePages(descriptors) {
       viewport: { width: 1440, height: 1000 },
       ...(httpCredentials ? { httpCredentials } : {}),
       userAgent:
-        'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/150 Safari/537.36 Radish/4.4'
+        'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/150 Safari/537.36 Radish/4.4.1'
     });
 
     for (const descriptor of pagesToScan) {

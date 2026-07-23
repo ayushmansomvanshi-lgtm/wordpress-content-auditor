@@ -916,6 +916,77 @@ function render(data) {
   results.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
+function sleep(milliseconds) {
+  return new Promise((resolve) => window.setTimeout(resolve, milliseconds));
+}
+
+async function readJsonResponse(response) {
+  const raw = await response.text();
+
+  if (!raw.trim()) {
+    throw new Error(
+      `The server returned an empty response (HTTP ${response.status}). ` +
+      'This usually means the hosted service restarted or stopped during the audit. Check the hosting logs and run it again.'
+    );
+  }
+
+  try {
+    return JSON.parse(raw);
+  } catch {
+    const preview = raw.replace(/\s+/g, ' ').trim().slice(0, 180);
+    throw new Error(
+      `The server returned an unreadable response (HTTP ${response.status}).` +
+      (preview ? ` Response: ${preview}` : '')
+    );
+  }
+}
+
+async function waitForAudit(jobId) {
+  const startedAt = Date.now();
+  const maximumWait = 30 * 60 * 1000;
+  let temporaryFailures = 0;
+
+  while (Date.now() - startedAt < maximumWait) {
+    await sleep(2000);
+
+    try {
+      const response = await fetch(`/api/audit/status/${encodeURIComponent(jobId)}`, {
+        cache: 'no-store',
+        headers: { Accept: 'application/json' }
+      });
+      const data = await readJsonResponse(response);
+
+      if (!response.ok) {
+        throw new Error(data.error || `Audit status request failed with HTTP ${response.status}.`);
+      }
+
+      temporaryFailures = 0;
+
+      if (data.status === 'complete') {
+        if (!data.result) throw new Error('The audit finished, but no report data was returned.');
+        return data.result;
+      }
+
+      if (data.status === 'failed') {
+        throw new Error(data.error || 'The hosted audit stopped before completion.');
+      }
+
+      if (data.status === 'queued') {
+        statusText.textContent = 'The audit is queued and will start shortly.';
+      } else if (data.status === 'running') {
+        statusText.textContent = 'The server is scanning the site. You can keep this tab open while it finishes.';
+      }
+    } catch (error) {
+      temporaryFailures += 1;
+      if (temporaryFailures >= 3) throw error;
+      statusText.textContent = 'The hosting service is reconnecting. The audit status will be checked again.';
+      await sleep(3000);
+    }
+  }
+
+  throw new Error('The audit exceeded the 30-minute hosted limit. Try a smaller site or use a higher-memory hosting plan.');
+}
+
 form.addEventListener('submit', async (event) => {
   event.preventDefault();
   results.classList.add('hidden');
@@ -924,9 +995,12 @@ form.addEventListener('submit', async (event) => {
   startProgress();
 
   try {
-    const response = await fetch('/api/audit', {
+    const response = await fetch('/api/audit/start', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'application/json'
+      },
       body: JSON.stringify({
         siteUrl: document.querySelector('#siteUrl').value,
         stagingAuth: {
@@ -938,16 +1012,18 @@ form.addEventListener('submit', async (event) => {
       })
     });
 
-    const data = await response.json();
-    if (!response.ok) throw new Error(data.error || 'Audit failed.');
+    const startData = await readJsonResponse(response);
+    if (!response.ok) throw new Error(startData.error || 'The audit could not be started.');
+    if (!startData.jobId) throw new Error('The server did not return an audit job ID.');
 
+    const data = await waitForAudit(startData.jobId);
     render(data);
     finishProgress(
       true,
       `${data.summary.uniquePublishedPosts} posts checked, ${data.summary.representativePagesScanned} page templates inspected, performance measured and ${data.summary.issueGroups} issue groups recorded.`
     );
   } catch (error) {
-    finishProgress(false, error.message);
+    finishProgress(false, error.message || 'The audit stopped unexpectedly.');
   } finally {
     auditButton.disabled = false;
     auditButton.querySelector('span').textContent = 'Run Radish';

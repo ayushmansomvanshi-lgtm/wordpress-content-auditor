@@ -5,3 +5,8 @@ services:
     plan: free
     healthCheckPath: /health
     autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: RADISH_MAX_REPRESENTATIVE_PAGES
+        value: "6"
